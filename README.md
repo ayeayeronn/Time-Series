@@ -1,7 +1,7 @@
 # Time-Series
 
-Compilation of assignments done in my Statistics course: Time Series. <br>
-Topics covered: <br>
+Compilation of assignments done in my Statistics course: Time Series. <br> <br>
+**Topics covered**: <br>
   Time Series Features <br>
     - Lagged <br>
     - Autocorrelation <br>
