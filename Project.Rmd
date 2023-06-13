@@ -1,0 +1,167 @@
+---
+title: "Project"
+author: "Aaron Banlao"
+output: pdf_document
+---
+
+
+Install the COVID19 Data Hub R package. Select at least two countries to work with of interest to you and make forecasts of the number of cases for the next 12 months.
+
+Build the following models:
+
+Build a linear regression model using TSLM().
+Build an appropriate exponential smoothing model.
+
+
+```{r}
+library(pacman)
+p_load(fpp3, tidyverse, doParallel)
+```
+
+
+```{r}
+covid <- read.csv("1.csv", header = T)
+```
+
+```{r}
+head(covid)
+```
+
+```{r}
+covid$id[covid$id == "59a13ceb"] <- "United States"
+covid$id[covid$id == "78833522"] <- "China"
+```
+
+```{r}
+covid <- covid %>% 
+  filter(id == "United States" | id == "China")
+head(covid)
+```
+
+```{r}
+covid$date <- as.Date(covid$date)
+```
+
+
+
+
+```{r}
+covid <- covid %>% 
+  as_tsibble(key = "id", index = "date")
+head(covid)
+```
+
+```{r}
+class(covid)
+```
+
+
+```{r}
+covid <- covid %>% 
+  dplyr::select(id, date, confirmed)
+```
+
+```{r}
+covid <- covid %>% 
+  drop_na()
+```
+
+
+# Time Series Linear Model
+
+## China
+
+```{r}
+china <- covid %>% 
+  filter(id == "China") %>% 
+  select(date, confirmed)
+
+head(china)
+```
+
+
+
+```{r}
+china_fit <- china %>% 
+  model(TSLM(confirmed ~ trend() + season()))
+
+china_fit %>% 
+  forecast(h = 365) %>% 
+  autoplot(china) +
+  labs(title = "China Confirmed Cases Forecast")
+```
+
+## United States
+
+```{r}
+us <- covid %>% 
+  filter(id == "United States") %>% 
+  select(date, confirmed)
+
+head(us)
+```
+
+
+```{r}
+us_fit <- us %>% 
+  model(TSLM(confirmed ~ trend() + season()))
+
+us_fit %>% 
+  forecast(h = 365) %>% 
+  autoplot(us) +
+  labs(title = "US Confirmed Cases Forecast")
+```
+
+
+# Exponential Smoothing 
+
+## China
+
+### Best Model
+
+According to the RSME value, the appropriate exponential model is the holts method.
+
+```{r}
+registerDoParallel(cores = 16)
+china %>% 
+  stretch_tsibble() %>% 
+  model(dholts = ETS(confirmed ~ error("A") + trend("Ad") + season("N")),
+        holts = ETS(confirmed ~ error("A") + trend("A") + season("N")),
+        ses = ETS(confirmed ~ error("A") + trend("N") + season("N"))) %>% 
+  forecast(h = 365) %>% 
+  accuracy(china)
+```
+
+```{r}
+china %>% 
+  model(holts = ETS(confirmed ~ error("A") + trend("A") + season("N"))) %>% 
+  forecast(h = 365) %>% 
+  autoplot(china) +
+  labs(title = "Predicted China Confirmed Cases (Holts)")
+```
+
+
+## US
+
+### Best Model
+
+According to the RSME values, the appropriate exponential model is the damped holts method.
+
+```{r}
+us %>% 
+  stretch_tsibble(.init = 10) %>% 
+  model(dholts = ETS(confirmed ~ error("A") + trend("Ad") + season("N")),
+        holts = ETS(confirmed ~ error("A") + trend("A") + season("N")),
+        ses = ETS(confirmed ~ error("A") + trend("N") + season("N"))) %>% 
+  forecast(h = 365) %>% 
+  accuracy(us)
+```
+
+```{r}
+us %>% 
+  model(dholts = ETS(confirmed ~ error("A") + trend("Ad") + season("N"))) %>% 
+  forecast(h = 365) %>% 
+  autoplot(us) +
+  labs(title = "Predicted US Confirmed Cases (Damped Holts)")
+
+```

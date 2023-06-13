@@ -1,0 +1,121 @@
+---
+title: "Homework 3"
+author: "Aaron Banlao"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r}
+library(tidyverse)
+library(fpp3)
+library(tsibble)
+library(tsibbledata)
+library(feasts)
+library(broom)
+library(fracdiff)
+library(fable)
+library(glue)
+```
+
+
+# Problem 1
+
+Write a function to compute the mean and standard deviation of a time series, and apply it to the PBS data. Plot the series with the highest mean, and the series with the lowest standard deviation.
+
+## Code
+
+```{r}
+head(PBS)
+```
+
+
+```{r}
+maxmean_PBS <- PBS %>% 
+  features(Cost, list(mean = mean)) %>% 
+  filter(mean == max(mean))
+
+maxmean_PBS
+```
+
+```{r}
+PBS %>% 
+  filter(Concession == "Concessional",
+         Type == "Co-payments", 
+         ATC1 == "C",
+         ATC2 == "C10") %>% 
+  autoplot() +
+  labs(title = "Highest Mean Series")
+```
+
+
+```{r}
+PBS %>% 
+  features(Cost, list(sd = sd)) %>% 
+  filter(sd == min(sd))
+```
+```{r}
+PBS %>% 
+  filter(Concession == "General", 
+         Type == "Co-payments",
+         ATC1 == "S", 
+         ATC2 == "S") %>% 
+  autoplot() +
+  labs(title = "Lowest Standard Deviation Series")
+```
+
+# Problem 3)
+
+Use a feature-based approach to look for outlying series in the PBS data. What is unusual about the series you identify as “outliers”.
+
+## Answer)
+
+The outliers we have picked out have an unusual "seasonal" pattern, or lack of seasonality pattern we have observed in other datasets. These four outliers also show no trend. 
+
+## Code)
+
+```{r}
+pbs_features <- PBS %>% 
+  features(Cost, feature_set(pkgs = "feasts")) %>% 
+  select(-...26) %>% 
+  na.omit()
+```
+
+```{r}
+head(pbs_features)
+```
+
+
+
+```{r}
+pbs1 <- pbs_features %>% 
+  select(-Concession, -Type, -ATC1, -ATC2) %>% 
+  prcomp(scale = T) %>% 
+  augment(pbs_features)
+```
+
+```{r}
+pbs1 %>% 
+  ggplot(aes(x = .fittedPC1, y = .fittedPC2, col = Type)) +
+  geom_point()
+```
+
+```{r}
+outliers <- pbs1 %>% 
+  filter(.fittedPC1 > 6) %>% 
+  select(Concession, Type, ATC1, ATC2)
+
+outliers
+```
+
+```{r}
+outliers %>% 
+  left_join(PBS, by = c("Concession", "Type", "ATC1", "ATC2")) %>% 
+  mutate(Series = glue("{Concession}", "{Type}", "{ATC1}", "{ATC2}", .sep = "\n\n")) %>% 
+  ggplot(aes(x = Month, y = Cost)) +
+  geom_line() +
+  facet_grid(Series ~ ., scales = "free") + 
+  labs(title = "Outliers")
+```

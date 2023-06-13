@@ -1,0 +1,406 @@
+---
+title: "Homework 5"
+author: "Aaron Banlao"
+output: pdf_document
+---
+
+```{r}
+library(ggplot2)
+library(fpp3)
+library(seasonal)
+library(tsibbledata)
+library(fable)
+```
+
+
+
+
+# Section 7.10 Exercises 1
+
+Half-hourly electricity demand for Victoria, Australia is contained in vic_elec. Extract the January 2014 electricity demand, and aggregate this data to daily with daily total demands and maximum temperatures.
+
+Plot the data and find the regression model for Demand with temperature as a predictor variable. Why is there a positive relationship?
+
+Produce a residual plot. Is the model adequate? Are there any outliers or influential observations?
+
+Use the model to forecast the electricity demand that you would expect for the next day if the maximum temperature was  
+15C and compare it with the forecast if the with maximum temperature was 35C. Do you believe these forecasts?
+
+Give prediction intervals for your forecasts.
+
+Plot Demand vs Temperature for all of the available data in vic_elec aggregated to daily total demand and maximum temperature. What does this say about your model?
+
+### **Answer:**
+
+#### a) 
+
+There is a positive relationship because the coefficient of Temperature is positive. As the temperature goes up, the demand for using the air conditioning goes up as well. 
+
+#### b)
+
+It seems that there is no apparent pattern with the residuals meaning that the model is adequate. 
+
+#### c) 
+
+The forecast for 15 was off but the temperature for 35 seemed to be following the trend of previous data. 
+
+#### e)
+
+The plot suggest that the model is not linear but rather exponential
+
+### **Code and Comments:**
+
+```{r}
+jan14_vic_elec <- vic_elec |>
+  filter(yearmonth(Time) == yearmonth("2014 Jan")) |>
+  index_by(Date = as_date(Time)) |>
+  summarise(
+    Demand = sum(Demand),
+    Temperature = max(Temperature)
+  )
+
+head(jan14_vic_elec)
+```
+### a)
+
+```{r}
+fit <- jan14_vic_elec %>% 
+  model(tslm = TSLM(Demand ~ Temperature))
+
+report(fit)
+```
+
+
+```{r}
+jan14_vic_elec %>% 
+  ggplot(aes(x = Temperature, y = Demand)) + 
+  labs(y = "2014 January Electricty Demand") +
+  geom_point() +
+  geom_smooth(method = "lm", se = F)
+```
+
+### b)
+
+```{r}
+augment(fit) %>% 
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+#### c)
+
+```{r}
+jan14_vic_elec |>
+  model(TSLM(Demand ~ Temperature)) |>
+  forecast(
+    new_data(jan14_vic_elec, 1) |>
+      mutate(Temperature = 15)
+  ) |>
+  autoplot(jan14_vic_elec)
+```
+```{r}
+jan14_vic_elec |>
+  model(TSLM(Demand ~ Temperature)) |>
+  forecast(
+    new_data(jan14_vic_elec, 1) |>
+      mutate(Temperature = 35)
+  ) |>
+  autoplot(jan14_vic_elec)
+```
+
+#### d)
+
+```{r}
+fit <- jan14_vic_elec %>% 
+  model(TSLM(Demand ~ Temperature))
+
+pred <- scenarios(
+  "15" = new_data(jan14_vic_elec, 2) %>% 
+    mutate(Temperature = 15),
+  "35" = new_data(jan14_vic_elec, 2) %>% 
+    mutate(Temperature = 35)
+)
+```
+
+#### e)
+
+```{r}
+plot(Demand~Temperature, data = vic_elec)
+```
+
+# Section 7.10 Exercises 2
+
+Data set olympic_running contains the winning times (in seconds) in each Olympic Games sprint, middle-distance and long-distance track events from 1896 to 2016.
+
+Plot the winning time against the year for each event. Describe the main features of the plot.
+Fit a regression line to the data for each event. Obviously the winning times have been decreasing, but at what average rate per year?
+Plot the residuals against the year. What does this indicate about the suitability of the fitted lines?
+Predict the winning time for each race in the 2020 Olympics. Give a prediction interval for your forecasts. What assumptions have you made in these calculations?
+
+
+
+### **Answer:**
+
+#### b)
+For the men's 100, the rate is decreasing at about 0.01 seconds.
+For the men's 200, the rate is decreasing at about 0.02 seconds.
+For the men's 400, the rate is decreasing at about 0.06 seconds.
+For the men's 800, the rate is decreasing at about 0.15 seconds.
+For the men's 1500, the rate is decreasing at about 0.31 seconds.
+For the men's 5000, the rate is decreasing at about 1.02 seconds.
+For the men's 10000, the rate is decreasing at about 1.03 seconds.
+
+#### c)
+
+The residual plot shows that there is no apparent pattern and the model is fitted well.
+
+### **Code and Comments:**
+
+```{r}
+data("olympic_running")
+olympic_running <- olympic_running %>% 
+  filter(Sex == "men")
+olympic_running %>% 
+  distinct(Length)
+```
+
+#### a)
+
+```{r}
+olympic_running %>% 
+  ggplot(aes(x = Year, y = Time, color = Length)) +
+  geom_point() +
+  facet_wrap(~Length) +
+  geom_smooth(method = "lm", se = F)
+```
+
+#### b)
+
+```{r}
+one <- olympic_running %>% 
+  filter(Length == 100) %>% 
+  model(TSLM(Time ~ Year)) %>% 
+  report()
+```
+
+```{r}
+two <- olympic_running %>% 
+  filter(Length == 200) %>% 
+  model(TSLM(Time ~ Year)) %>% 
+  report()
+```
+
+```{r}
+four <- olympic_running %>% 
+  filter(Length == 400) %>% 
+  model(TSLM(Time ~ Year)) %>% 
+  report()
+```
+
+```{r}
+eight <- olympic_running %>% 
+  filter(Length == 800) %>% 
+  model(TSLM(Time ~ Year)) %>% 
+  report()
+```
+
+```{r}
+fift <- olympic_running %>% 
+  filter(Length == 1500) %>% 
+  model(TSLM(Time ~ Year)) %>% 
+  report()
+```
+
+```{r}
+five <- olympic_running %>% 
+  filter(Length == 5000) %>% 
+  model(TSLM(Time ~ Year)) %>% 
+  report()
+```
+
+```{r}
+ten <- olympic_running %>% 
+  filter(Length == 10000) %>% 
+  model(TSLM(Time ~ Year)) %>% 
+  report()
+```
+
+
+#### c)
+```{r}
+augment(two) %>% 
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+
+
+# Section 8.8 Exercises 5
+
+Data set global_economy contains the annual Exports from many countries. Select one country to analyse.
+
+Plot the Exports series and discuss the main features of the data.
+Use an ETS(A,N,N) model to forecast the series, and plot the forecasts.
+Compute the RMSE values for the training data.
+Compare the results to those from an ETS(A,A,N) model. (Remember that the trended model is using one more parameter than the simpler model.) Discuss the merits of the two forecasting methods for this data set.
+Compare the forecasts from both methods. Which do you think is best?
+Calculate a 95% prediction interval for the first forecast for each model, using the RMSE values and assuming normal errors. Compare your intervals with those produced using R.
+
+### **Answer:**
+
+#### a)
+
+We see an upward overall trend with the United States exports. There are major dips, for example, in 1980, 2001, and 2008 when there were recessions that would affect the output of goods.
+
+
+#### c)
+
+The RMSE value for the model is 0.6319877
+
+#### d/e) 
+
+The holt's method is a better method to use because the RSME value is smaller. With holt's we are able to caputure trending forecasts. SES is not the suitable method because there is a clear trend apparent with the plot.
+
+### **Code and Comments:**
+
+```{r}
+head(global_economy)
+global_economy %>% 
+  distinct(Country)
+```
+
+```{r}
+us <- global_economy %>% 
+  filter(Country == "United States")
+head(us)
+```
+
+```{r}
+us <- us %>% 
+  drop_na()
+```
+
+
+#### a)
+
+```{r}
+us %>% 
+  autoplot(Exports) + 
+  labs(title = "United States Exports")
+```
+
+#### b)
+
+```{r}
+fit1 <- us %>% 
+  model(ses = ETS(Exports ~ error("A") + trend("N") + season("N"))) 
+
+fit1 %>% 
+  forecast(h = 12) %>% 
+  autoplot(us) +
+  labs(title = "United States Exports 12 Year Forecast")
+```
+#### c)
+
+```{r}
+accuracy(fit1)
+```
+
+
+#### d)
+
+```{r}
+fit2 <- us %>% 
+  model(holts = ETS(Exports ~ error("A") + trend("A") + season("N"))) 
+
+fit2 %>% 
+  forecast(h = 12) %>% 
+  autoplot(us) +
+  labs(title = "United States Exports 12 Year Forecast")
+```
+
+```{r}
+accuracy(fit2)
+```
+
+#### f)
+
+```{r}
+rmse <- accuracy(fit1) %>% 
+  pull(RMSE)
+yhat <- forecast(fit1, h = 1) %>% 
+  pull(.mean)
+```
+
+```{r}
+yhat[1] + c(-1, 1) * qnorm(0.975) * rmse[1]
+```
+
+```{r}
+rmse <- accuracy(fit2) %>% 
+  pull(RMSE)
+yhat <- forecast(fit2, h = 1) %>% 
+  pull(.mean)
+```
+
+```{r}
+yhat[1] + c(-1, 1) * qnorm(0.975) * rmse[1]
+```
+```{r}
+fit1 %>% 
+  forecast(h = 12) %>% 
+  mutate(interval = hilo(Exports, level = 95)) %>% 
+  unpack_hilo(interval)
+```
+
+```{r}
+fit2 %>% 
+  forecast(h = 12) %>% 
+  mutate(interval = hilo(Exports, level = 95)) %>% 
+  unpack_hilo(interval)
+```
+
+
+# Section 8.8 Exercises 7
+
+Find an ETS model for the Gas data from aus_production and forecast the next few years. Why is multiplicative seasonality necessary here? Experiment with making the trend damped. Does it improve the forecasts?
+
+### **Answer:**
+
+The multiplicative method is preferred because the seasonal variations are changing proportional to the level of the series. The damped model, compared to the multiplicative model, is a better method because the RMSE is lower. 
+
+### **Code and Comments:**
+
+```{r}
+head(aus_production)
+```
+
+```{r}
+aus_production %>% 
+  autoplot(Gas)
+```
+
+```{r}
+fit <- aus_production %>% 
+  model(multiplicative = ETS(Gas ~ error("M") + trend("A") + season("M")))
+
+fit %>% 
+  forecast(h = 12) %>% 
+  autoplot(aus_production)
+```
+
+```{r}
+fit2 <- aus_production %>% 
+  model(damped = ETS(Gas ~ error("A") + trend("Ad", phi = 0.9) + season("M")))
+
+fit2 %>% 
+  forecast(h = 12) %>% 
+  autoplot(aus_production)
+```
+
+```{r}
+fit %>% 
+  accuracy()
+
+fit2 %>% 
+  accuracy()
+```

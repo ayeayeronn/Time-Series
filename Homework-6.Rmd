@@ -1,0 +1,304 @@
+---
+title: "Homework 6"
+author: "Aaron Banlao"
+output: pdf_document
+---
+
+```{r}
+library(pacman)
+p_load(fpp3, tidyverse)
+```
+
+
+
+# Section 9.11 Exercises 1
+
+Figure 9.32 shows the ACFs for 36 random numbers, 360 random numbers and 1,000 random numbers.
+
+Explain the differences among these figures. Do they all indicate that the data are white noise?
+
+Why are the critical values at different distances from the mean of zero? Why are the autocorrelations different in each figure when they each refer to white noise?
+
+### **Answer:**
+
+a) The three figures indicate that the data are white noise because the spikes are within the bounded areas. As the number of numbers increase the ACF plot bounds get smaller, meaning that the auto correlations get closer to zero. 
+
+b) As stated above, as the number grows, the bounds get smaller because the denominator would be bigger when calculating the bounds. The larger the number, the less chance of autocorrelation. 
+
+
+```{r}
+
+```
+
+# Section 9.11 Exercises 2
+
+A classic example of a non-stationary series are stock prices. Plot the daily closing prices for Amazon stock (contained in gafa_stock), along with the ACF and PACF. Explain how each plot shows that the series is non-stationary and should be differenced.
+
+### **Answer:**
+
+The series in non-stationary because the data has an increasing trend. The data is non-stationary according to the ACF plot because instead of dropping to zero, it is constantly near one. The closing price would need to be differenced to become stationary.
+
+### **Code and Comments:**
+
+```{r}
+gafa_stock %>% 
+  distinct(Symbol)
+
+head(gafa_stock)
+```
+
+```{r}
+gafa_stock %>% 
+  filter(Symbol == "AMZN") %>% 
+  gg_tsdisplay(Close, plot_type = 'partial')
+```
+
+
+# Section 9.11 Exercises 6
+
+
+### **Answer:**
+
+#### b)
+
+As the number gets smaller, there are more random fluctuations. 
+
+#### d)
+
+Similar with answer b, the smaller the number gets, there are more random fluctuations.
+
+### **Code and Comments:**
+
+#### a)
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100)
+for(i in 2:100)
+  y[i] <- 0.6*y[i-1] + e[i]
+sim <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+#### b)
+
+```{r}
+sim %>% 
+  autoplot()
+```
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100)
+for(i in 2:100)
+  y[i] <- 0.06*y[i-1] + e[i]
+sim <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+```{r}
+sim %>% 
+  autoplot()
+```
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100)
+for(i in 2:100)
+  y[i] <- 0.00006*y[i-1] + e[i]
+sim <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+```{r}
+sim %>% 
+  autoplot()
+```
+
+
+#### c)
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100)
+for(i in 2:100)
+  y[i] <- 0.6*e[i-1] + e[i]
+sim <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+```{r}
+sim %>% 
+  autoplot()
+```
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100)
+for(i in 2:100)
+  y[i] <- 0.06*e[i-1] + e[i]
+sim <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+```{r}
+sim %>% 
+  autoplot()
+```
+
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100)
+for(i in 2:100)
+  y[i] <- 0.00006*e[i-1] + e[i]
+sim <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+```{r}
+sim %>% 
+  autoplot()
+```
+
+#### e)
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100, sd = 1)
+for(i in 2:100)
+  y[i] <- 0.6*y[i-1] + 0.6*e[i-1] + e[i]
+sim <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+```{r}
+sim %>% 
+  autoplot()
+```
+
+
+#### f)
+
+```{r}
+y <- numeric(100)
+e <- rnorm(100, sd=1)
+for(i in 3:100)
+  y[i] <- -0.8*y[i-1] + 0.3*y[i-2] + e[i]
+sim1 <- tsibble(idx = seq_len(100), y = y, index = idx)
+```
+
+```{r}
+sim1 %>% 
+  autoplot()
+```
+
+
+
+# Section 9.11 Exercises 8
+
+For the United States GDP series (from global_economy):
+
+if necessary, find a suitable Box-Cox transformation for the data;
+fit a suitable ARIMA model to the transformed data using ARIMA();
+try some other plausible models by experimenting with the orders chosen;
+choose what you think is the best model and check the residual diagnostics;
+produce forecasts of your fitted model. Do the forecasts look reasonable?
+compare the results with what you would obtain using ETS() (with no transformation).
+
+### **Answer:**
+
+#### d)
+
+The best model that has the lowest AICc is the arima1 model. 
+
+#### e)
+
+The forecast made with the model chosen looks reasonable as it follows the trend 
+
+#### f)
+
+With the ETS model, there is a wider prediction interval
+
+### **Code and Comments:**
+
+#### a)
+
+```{r}
+head(global_economy)
+```
+
+```{r}
+global_economy %>% 
+  distinct(Country)
+```
+
+
+```{r}
+us <- global_economy %>% 
+  filter(Country == "United States") %>% 
+  select(Country, GDP)
+```
+
+```{r}
+lambda <-  us %>% 
+  features(GDP, features = guerrero) %>% 
+  pull(lambda_guerrero) 
+```
+
+```{r}
+us <- us %>% 
+  mutate(GDP = box_cox(GDP, lambda))
+```
+
+
+#### b)
+
+```{r}
+fit <- us %>% 
+  model(ARIMA(GDP, stepwise = F, approximation = F))
+
+report(fit)
+```
+
+#### c)
+
+```{r}
+fit2 <- us %>% 
+  model(arima1 = ARIMA(GDP ~ pdq(1, 2, 1)),
+        arima2 = ARIMA(GDP ~ pdq(1, 1, 1)),
+        arima3 = ARIMA(GDP ~ pdq(2, 2, 1)))
+
+report(fit2)
+```
+
+#### d)
+
+```{r}
+fit3 <- us %>% 
+  model(ARIMA(GDP ~ pdq(1, 2, 1,)))
+```
+
+```{r}
+fit3 %>% 
+  gg_tsresiduals()
+```
+
+
+#### e)
+
+```{r}
+fit3 %>% 
+  forecast(h = 10) %>% 
+  autoplot(us)
+```
+
+
+#### f)
+
+```{r}
+us2 <- global_economy %>% 
+  filter(Country == "United States") %>% 
+  select(Country, GDP)
+  
+```
+
+```{r}
+us2 %>% 
+  model(ETS(GDP)) %>% 
+  forecast(h = 10) %>% 
+  autoplot(us2)
+```

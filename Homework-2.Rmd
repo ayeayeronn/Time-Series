@@ -1,0 +1,266 @@
+---
+title: "Homework 2"
+author: "Aaron Banlao"
+output: pdf_document
+---
+```{r}
+library(fpp3)
+library(tsibbledata)
+library(seasonal)
+```
+
+# Problem 7
+
+Consider the last five years of the Gas data from aus_production.
+
+gas <- tail(aus_production, 5*4) |> select(Gas)
+Plot the time series. Can you identify seasonal fluctuations and/or a trend-cycle?
+Use classical_decomposition with type=multiplicative to calculate the trend-cycle and seasonal indices.
+Do the results support the graphical interpretation from part a?
+Compute and plot the seasonally adjusted data.
+Change one observation to be an outlier (e.g., add 300 to one observation), and recompute the seasonally adjusted data. What is the effect of the outlier?
+Does it make any difference if the outlier is near the end rather than in the middle of the time series?
+
+## a)
+
+### Answer)
+There seems to be a decline at every year's Q1 as well as a peak in every year's Q2. There are definitely seasonal fluctuations with a slight upward trend 
+
+### Code)
+
+
+```{r}
+head(aus_production)
+
+gas <- tail(aus_production, 5*4) %>% 
+  select(Gas)
+head(gas)
+```
+```{r}
+autoplot(gas) + labs(title = "Gas Production over Quarterly Periods")
+```
+
+## b)
+
+### Code)
+```{r}
+gas %>% 
+  model(
+    classical_decomposition(Gas, type = "multiplicative")
+  ) %>% 
+  components() %>% 
+  autoplot() + labs(title = "Gas Production over Quarterly Periods")
+```
+
+## c)
+
+### Answer)
+Yes, the results support our assumptions from question a. There is an apparent trend and there is a clear seasonal pattern according to the plot. 
+
+## d)
+
+### Code)
+
+```{r}
+stlgas <- gas %>% 
+  model(stl = STL(Gas))
+
+components(stlgas)
+```
+
+```{r}
+components(stlgas) %>% 
+  as_tsibble() %>% 
+  autoplot(Gas, colour= "gray") +
+  geom_line(aes(y = season_adjust), color = "orange") + labs(title = "Gas Production vs Seasonal Adjusted (Orange)") 
+```
+## e)
+
+### Answer)
+
+The outlier changed substantially changed the shape of the data plot 
+
+### Code)
+
+```{r}
+gas2 <- gas
+```
+
+
+```{r}
+gas2$Gas[1] <- gas2$Gas[1] + 300
+```
+
+```{r}
+stlgas2 <- gas2 %>% 
+  model(stl = STL(Gas))
+components(stlgas2)
+```
+
+
+```{r}
+components(stlgas2) %>% 
+  as_tsibble() %>% 
+  autoplot(Gas) + labs(title = "Gas Production with Beginning Outlier") +
+  geom_line(aes(y = season_adjust))
+```
+## f)
+
+### Answer)
+
+It doesn't seem to matter when the outlier is in the beginning or the end of the time series. The same shape is produced when plotting the data
+
+### Code)
+
+
+```{r}
+gas3 <- gas
+```
+
+```{r}
+gas3$Gas[20] <- gas3$Gas[20] + 300
+```
+
+```{r}
+stlgas3 <- gas3 %>% 
+  model(stl = STL(Gas))
+components(stlgas3)
+```
+```{r}
+components(stlgas3) %>% 
+  as_tsibble() %>% 
+  autoplot(Gas) + labs(title = "Gas Production with Ending Outlier") +
+  geom_line(aes(y = season_adjust))
+```
+
+# Problem 8)
+
+Recall your retail time series data (from Exercise 8 in Section 2.10). Decompose the series using X-11. Does it reveal any outliers, or unusual features that you had not noticed previously?
+
+### Answer)
+
+There are several spikes that occur in the remainder around the years 1982-1983. It is surprising because the seasonality and trend look consistent while visualizing turnover over time. 
+
+### Code)   
+
+```{r}
+set.seed(101)
+myseries <- aus_retail %>%
+  filter(`Series ID` == sample(aus_retail$`Series ID`,1))
+```
+
+```{r}
+autoplot(myseries) + labs(title = "Australian Retail Turnover")
+```
+```{r}
+x11myseries <- myseries %>%
+  model(x11 = X_13ARIMA_SEATS(Turnover ~ x11())) %>%
+  components()
+
+autoplot(x11myseries)
+```
+
+# Problem 9)
+
+Write about 3–5 sentences describing the results of the decomposition. Pay particular attention to the scales of the graphs in making your interpretation.
+Is the recession of 1991/1992 visible in the estimated components?
+
+### Answer)
+
+a) We can see an upward trend over time but the slope of the trend differs during certain range periods. We can see that around 1991-1993, there are several dips in the workforce and the trend line is nearly parallel with the x-axis. Each month has different variation scales in the monthly seasonal graph. 
+
+b) The recession is not so apparent in the overall graph and the trend line, but it is noticeable in the remainder plot. 
+
+# Problem 10)
+
+This exercise uses the canadian_gas data (monthly Canadian gas production in billions of cubic metres, January 1960 – February 2005).
+
+Plot the data using autoplot(), gg_subseries() and gg_season() to look at the effect of the changing seasonality over time.1
+Do an STL decomposition of the data. You will need to choose a seasonal window to allow for the changing shape of the seasonal component.
+How does the seasonal shape change over time? [Hint: Try plotting the seasonal component using gg_season().]
+Can you produce a plausible seasonally adjusted series?
+Compare the results with those obtained using SEATS and X-11. How are they different?
+
+## a)
+
+### Code
+
+```{r}
+head(canadian_gas)
+```
+
+```{r}
+autoplot(canadian_gas)
+```
+
+```{r}
+gg_subseries(canadian_gas)
+```
+
+```{r}
+gg_season(canadian_gas)
+```
+
+## b)
+
+### Code)
+
+```{r}
+canadian_gas %>% 
+  model(STL(Volume ~ trend(window = 21) + season(window = 7), robust = TRUE)) %>% 
+  components() %>% 
+  autoplot()
+```
+
+## c)
+
+### Answer)
+
+The seasonal shape seems to be identical with each other up until after 1975 and then the shape increases and then decreases back to almost normal during the mid 1990's. Around that time, there wasn't any trend with gas production. 
+
+## d)
+
+### Code)
+
+```{r}
+x11gas <- canadian_gas %>% 
+  model(x11 = X_13ARIMA_SEATS(Volume ~ x11())) %>% 
+  components()
+```
+
+
+```{r}
+x11gas %>% 
+  ggplot(aes(x = Month)) +
+  geom_line(aes(y = Volume, colour = "Data")) +
+  geom_line(aes(y = season_adjust, colour = "Seasonally Adjusted")) +
+  geom_line(aes(y = trend, colour = "Trend")) +
+  labs(y = "Volume (cubic meters in billions)", title = "Monthly Canadian Gas Production") +
+  scale_colour_manual(values = c("gray", "blue", "brown"), breaks = c("Data", "Seasonally Adjusted", "Trend"))
+```
+
+
+## e)
+
+### Answer)
+
+The results from both X11 AND SEATS are pretty similar. The main difference is that the STL seasonal shape is unique from X11 and SEATS. Also, the remainder on the STL decomposition is the smallest compared to them all. 
+
+### Code)                 
+
+```{r}
+x11gas <- canadian_gas %>% 
+  model(x11 = X_13ARIMA_SEATS(Volume ~ x11())) %>% 
+  components()
+
+autoplot(x11gas)
+  
+```
+
+```{r}
+seatsgas <- canadian_gas %>% 
+  model(seats = X_13ARIMA_SEATS(Volume ~ seats())) %>% 
+  components()
+
+autoplot(seatsgas)
+```

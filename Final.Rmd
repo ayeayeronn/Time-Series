@@ -1,0 +1,179 @@
+---
+title: "Final"
+author: "Aaron Banlao"
+date: "2023-06-13"
+output: pdf_document
+---
+
+```{r}
+library(pacman)
+p_load(tidyverse, fpp3, tsibbledata)
+```
+
+```{r}
+data("souvenirs")
+souvenirs
+```
+
+
+# Exercise 7.10 Problem 4
+
+The data set souvenirs concerns the monthly sales figures of a shop which opened in January 1987 and sells gifts, souvenirs, and novelties. The shop is situated on the wharf at a beach resort town in Queensland, Australia. The sales volume varies with the seasonal population of tourists. There is a large influx of visitors to the town at Christmas and for the local surfing festival, held every March since 1988. Over time, the shop has expanded its premises, range of products, and staff.
+
+Produce a time plot of the data and describe the patterns in the graph. Identify any unusual or unexpected fluctuations in the time series.
+Explain why it is necessary to take logarithms of these data before fitting a model.
+Fit a regression model to the logarithms of these sales data with a linear trend, seasonal dummies and a “surfing festival” dummy variable.
+Plot the residuals against time and against the fitted values. Do these plots reveal any problems with the model?
+Do boxplots of the residuals for each month. Does this reveal any problems with the model?
+What do the values of the coefficients tell you about each variable?
+What does the Ljung-Box test tell you about your model?
+Regardless of your answers to the above questions, use your regression model to predict the monthly sales for 1994, 1995, and 1996. Produce prediction intervals for each of your forecasts.
+How could you improve these predictions by modifying the model?
+
+## Answer
+
+### a)
+
+As the description of the problem states, there is an influx of visitors around Christmas time and in March, which is reflected in the plot. What is portrayed is that there is a growth in the trend that occurs every year, with the exception of the year 1991. 
+
+### b)
+A logarithm is necessary because the beginning of the data starts out with smaller values while the data points end with extreme values. 
+
+### d)
+When plotting the time against the fitted values, there seems to be no apparent pattern, indicating this is a good model. 
+
+### e)
+The residual plot shows that the variation of the residuals are not constant 
+
+### f)
+The coefficients of each variable measure the magnitude of the growth trend of sales of each month. 
+
+### g)
+We can conclude that the results are statistically significant and that the residuals are distinguishable from white noise
+
+
+### i)
+Since our model shows autocorrelation, one way of dealing with it is to add more meaningful variables. 
+
+## Code
+
+### a)
+
+```{r}
+souvenirs %>% 
+  autoplot(Sales) + 
+  labs(title = "Monthly Sales Figure")
+```
+
+
+### b)
+
+```{r}
+souvenirs$Sales <- log(souvenirs$Sales)
+souvenirs
+```
+
+
+### c) 
+
+```{r}
+souvenirs$surf <- ifelse(month(souvenirs$Month) == 3, 1, 0)
+head(souvenirs)
+```
+
+```{r}
+fit <- souvenirs %>% 
+  model(TSLM(Sales ~ trend() + season()))
+
+```
+
+### d)
+
+```{r}
+augment(fit) %>% 
+  ggplot(aes(x = Month, y = .resid)) +
+  geom_point()
+```
+
+```{r}
+augment(fit) %>% 
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+### e)
+
+
+```{r}
+fit %>% 
+  gg_tsresiduals()
+```
+
+### f)
+
+```{r}
+tidy(fit)
+```
+
+
+### g)
+
+```{r}
+augment(fit) %>% 
+  features(.innov, ljung_box, lag = 10)
+```
+
+### h)
+
+```{r}
+fit %>% 
+  forecast(h = 36) %>% 
+  hilo(level = 95) %>% 
+  mutate(
+    lower = `95%`$lower,
+    upper = `95%`$upper
+  )
+```
+
+
+# Exercise 9.11 Problem 7
+
+Consider aus_airpassengers, the total number of passengers (in millions) from Australian air carriers for the period 1970-2011.
+
+Use ARIMA() to find an appropriate ARIMA model. What model was selected. Check that the residuals look like white noise. Plot forecasts for the next 10 periods.
+Write the model in terms of the backshift operator.
+
+## Answer
+
+### a)
+
+The model chosen is ARIMA(0, 2, 1). According to the ACF plot, the residuals look like white noise. However, the histogram of residuals are skewed to the right meaning that the prediction intervals would be inaccurate. 
+
+### b)
+
+Yt = -0.8963 * Et-1 +Et
+
+## Code
+
+### a)
+
+```{r}
+head(aus_airpassengers)
+```
+```{r}
+fit <- aus_airpassengers %>% 
+  model(ARIMA(Passengers))
+
+report(fit)
+```
+
+```{r}
+fit %>% 
+  gg_tsresiduals()
+```
+
+```{r}
+fit %>% 
+  forecast(h = 10) %>% 
+  autoplot(aus_airpassengers)
+```

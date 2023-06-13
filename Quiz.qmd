@@ -1,0 +1,167 @@
+---
+title: "Stat 674 Quiz 1"
+author: "Aaron Banlao"
+format: pdf
+---
+
+## **Instructions:**
+
+Complete the questions in the space provided.  Render the Quarto Notebook to a .docx or .pdf file and submit your .qmd and your .docx or .pdf file through Canvas.
+
+The quiz investigate the dataset *global_economy*.  The dataset contains yearly historical economic data for all countries on Earth.
+
+```{r}
+library(pacman)
+p_load(tidyverse, fpp3)
+```
+
+### Question 1
+
+How many countries are there on Earth?  (You should look this number up on Google or on Wikipedia.)  How may Countries are there in the dataset?  Why do the numbers differ?
+
+#### Answer
+
+There are 263 unique countries in the dataset. According to google, there are currently 193 countries. These countries are recognized as members of the United Nations, and the remainder of the countries are not recognized, hence the numbers differ in the dataset.  
+
+#### Provide your code here.
+
+```{r}
+data(global_economy)
+global_economy
+
+global_economy %>%
+  distinct(Country) %>% 
+  count()
+```
+
+
+
+### Question 2
+
+Create a new variable *GDP_per_capita*.  Show the first few values of the new variable.
+
+
+#### Provide your code here.
+
+```{r}
+global_economy <- global_economy %>% 
+  mutate(gdp_per_capita = GDP / Population)
+
+global_economy %>% 
+  select(gdp_per_capita) %>% 
+  head()
+```
+
+### Question 3
+
+Plot the time series data for *Population* for each of these countries: United States, Brasil, Canada, Mexico, Russia, Israel, and Japan.  What do you notice about the population of Russian and Japan?
+
+#### Answer
+
+The population for Russia and Japan both reach a peak with their population that eventually declines. All the other countries have an increasing population trend. 
+
+#### Provide your code here.
+
+```{r}
+subset <- global_economy %>% 
+  filter(Country %in% c("United States", "Brazil", "Canada", "Mexico", "Russian Federation", "Israel", "Japan"))
+
+head(subset)
+```
+
+```{r}
+subset %>% 
+  autoplot(Population)
+```
+
+
+### Question 4
+
+Plot the time series data for *GDP* for each of these countries: United States, Brasil, Canada, Mexico, Russia, Israel, and Japan.  How does the GDP of Japan compare to the GDP of the United States?
+
+#### Answer
+
+The GDP for the United States has an exponential looking upward trend, while Japan's GDP is much lower and fluctuates more than the other countries. 
+
+#### Provide your code here.
+
+```{r}
+subset %>% 
+  autoplot(GDP)
+```
+
+### Question 5
+
+Plot the time series data for *GDP_per_capita* for each of these countries: United States, Brasil, Canada, Mexico, Russia, Israel, and Japan.  How does the GDP per capita differ for Russia, Mexico and Brasil?
+
+#### Answer
+
+The GDP per capita for Russia, Mexico, and Brazil is mostly constant until 2000 and then finally has an upward trend with fluctuations. 
+
+#### Provide your code here.
+
+```{r}
+subset %>% 
+  autoplot(gdp_per_capita)
+```
+
+### Question 6
+
+Remake all of your plots including China.  How does China compare to the United States in each plot?
+
+#### Answer
+
+China's population is substantially bigger than the United States which makes sense since China is a big country. The United States has a higher GDP than China but they both are similar in shape. The United States also has a higher GDP per capita but China's shape differs with more fluctuations. 
+
+#### Provide your code here.
+
+```{r}
+subset2 <- global_economy %>% 
+  filter(Country %in% c("United States", "Brazil", "Canada", "Mexico", "Russian Federation", "Israel", "Japan", "China"))
+
+subset2
+```
+
+```{r}
+subset2 %>% 
+  autoplot(Population)
+```
+
+```{r}
+subset2 %>% 
+  autoplot(GDP)
+```
+
+```{r}
+subset2 %>% 
+  autoplot(gdp_per_capita)
+```
+
+
+### Question 7
+
+Does it make sense to run a Seasonal Decomposition with these data?  Why or why not, explain.
+
+#### Answer
+
+It would not make sense to do a seasonal decomposition with this dataset because the time interval is yearly. Therefore it cannot capture the seasonality occuring in between months, days, etc. 
+
+### Question 8
+
+R questions.
+
+a) Explain what a *tsibble* is?
+    
+A tsibble is a dataframe that uses a time interval such as year, month, day, etc. as an index. 
+
+b) Explain what a *mable* is?
+    
+A mable, or model table, is an object that gets returned when a model is applied to each of the key variables of a tsibble.
+
+c) Explain what a *fable* is?
+    
+A fable, or forecast table, is an object that returns a new column that forecasts the interval of possible values for the next specified years, months, or days, etc. 
+
+
+
+
